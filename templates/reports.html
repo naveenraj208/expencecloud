@@ -1,0 +1,996 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="reports-container">
+    <!-- Header Section -->
+    <header class="reports-header">
+        <h1 class="reports-title">Financial Reports</h1>
+        <div class="report-period-selector">
+            <select id="period-select" class="period-select">
+                <option value="30">Last 30 Days</option>
+                <option value="90">Last 90 Days</option>
+                <option value="180">Last 6 Months</option>
+                <option value="365" selected>Last 12 Months</option>
+                <option value="0">All Time</option>
+            </select>
+            <button id="export-btn" class="export-btn">
+                <svg class="export-icon" viewBox="0 0 24 24">
+                    <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+                </svg>
+                Export
+            </button>
+        </div>
+    </header>
+
+    <!-- Monthly Summary Section -->
+    <section class="report-section" id="monthly-section">
+        <div class="section-header">
+            <h2 class="section-title">Monthly Summary</h2>
+            <div class="chart-toggle">
+                <button class="toggle-btn active" data-view="table">Table</button>
+                <button class="toggle-btn" data-view="chart">Line Chart</button>
+                <button class="toggle-btn" data-view="boxplot">Box Plot</button>
+            </div>
+        </div>
+        
+        <div class="section-content">
+            {% if monthly_data %}
+            <div class="table-view" id="monthly-table">
+                <div class="table-container">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Type</th>
+                                <th class="text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for data in monthly_data %}
+                            <tr>
+                                <td>{{ data.month|date:"F Y" }}</td>
+                                <td>
+                                    <span class="type-badge {% if data.transaction_type == 'income' %}income{% else %}expense{% endif %}">
+                                        {{ data.transaction_type|title }}
+                                    </span>
+                                </td>
+                                <td class="text-right">${{ data.total|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="chart-view hidden" id="monthly-chart">
+                <canvas id="monthlyTrendChart"></canvas>
+            </div>
+            
+            <div class="boxplot-view hidden" id="monthly-boxplot">
+                <canvas id="monthlyBoxPlot"></canvas>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <svg class="empty-icon" viewBox="0 0 24 24">
+                    <path d="M11,15H13V17H11V15M11,7H13V13H11V7M12,2C6.47,2 2,6.5 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20Z" />
+                </svg>
+                <p>No monthly transaction data available</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Category-wise Expenses Section -->
+    <section class="report-section" id="category-section">
+        <div class="section-header">
+            <h2 class="section-title">Category-wise Expenses</h2>
+            <div class="chart-toggle">
+                <button class="toggle-btn active" data-view="table">Table</button>
+                <button class="toggle-btn" data-view="chart">Pie Chart</button>
+            </div>
+        </div>
+        
+        <div class="section-content">
+            {% if category_data %}
+            <div class="table-view" id="category-table">
+                <div class="table-container">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th class="text-right">Total Spent</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for data in category_data %}
+                            <tr>
+                                <td>
+                                    <span class="category-badge" style="background-color: {{ data.color }};">
+                                        {{ data.name }}
+                                    </span>
+                                </td>
+                                <td class="text-right">${{ data.total|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="chart-view hidden" id="category-chart">
+                <canvas id="categoryPieChart"></canvas>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <svg class="empty-icon" viewBox="0 0 24 24">
+                    <path d="M11,15H13V17H11V15M11,7H13V13H11V7M12,2C6.47,2 2,6.5 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20Z" />
+                </svg>
+                <p>No expense data available by category</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<!-- Include Chart.js and plugins -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-box-and-violin-plot@3.6.0"></script>
+
+<!-- Include jsPDF and html2canvas for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+:root {
+    --primary: #4361ee;
+    --primary-dark: #3a0ca3;
+    --primary-light: #4895ef;
+    --secondary: #4cc9f0;
+    --success: #4caf50;
+    --danger: #f44336;
+    --warning: #ff9800;
+    --info: #2196f3;
+    --dark: #212529;
+    --light: #f8f9fa;
+    --gray: #6c757d;
+    --light-gray: #e9ecef;
+    --border-radius: 8px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+    --transition: all 0.3s ease;
+}
+
+/* Base Styles */
+.reports-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    color: var(--dark);
+    line-height: 1.6;
+}
+
+/* Header Styles */
+.reports-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.reports-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin: 0;
+}
+
+.report-period-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.period-select {
+    padding: 0.625rem 1rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    background-color: white;
+    font-size: 0.9375rem;
+    color: var(--dark);
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+
+.period-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+}
+
+.export-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background-color: white;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    color: var(--primary);
+    font-weight: 500;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+
+.export-btn:hover {
+    background-color: var(--light);
+    border-color: var(--gray);
+}
+
+.export-icon {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+/* Section Styles */
+.report-section {
+    margin-bottom: 3rem;
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--light-gray);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.section-title {
+    font-size: 1.375rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--primary-dark);
+}
+
+.chart-toggle {
+    display: flex;
+    border: 1px solid var(--light-gray);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.toggle-btn {
+    padding: 0.5rem 1rem;
+    background-color: white;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.toggle-btn.active {
+    background-color: var(--primary);
+    color: white;
+}
+
+.toggle-btn:not(.active):hover {
+    background-color: var(--light);
+}
+
+.section-content {
+    padding: 1.5rem;
+}
+
+/* Table Styles */
+.table-container {
+    overflow-x: auto;
+}
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+}
+
+.report-table th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    background-color: var(--light);
+    font-weight: 600;
+    color: var(--dark);
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.report-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--light-gray);
+    vertical-align: middle;
+}
+
+.report-table tr:last-child td {
+    border-bottom: none;
+}
+
+.report-table tr:hover {
+    background-color: var(--light);
+}
+
+.text-right {
+    text-align: right;
+}
+
+/* Badge Styles */
+.type-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.type-badge.income {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: #2e7d32;
+}
+
+.type-badge.expense {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: #c62828;
+}
+
+.category-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: white;
+}
+
+/* Chart Container Styles */
+.chart-view, .boxplot-view {
+    position: relative;
+    height: 400px;
+    width: 100%;
+}
+
+.chart-view.hidden, .boxplot-view.hidden {
+    display: none;
+}
+
+/* Empty State Styles */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+    color: var(--gray);
+}
+
+.empty-icon {
+    width: 48px;
+    height: 48px;
+    fill: var(--light-gray);
+    margin-bottom: 1rem;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .reports-container {
+        padding: 1.5rem 1rem;
+    }
+    
+    .reports-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .report-period-selector {
+        width: 100%;
+    }
+    
+    .period-select {
+        flex-grow: 1;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .chart-toggle {
+        width: 100%;
+    }
+    
+    .toggle-btn {
+        flex-grow: 1;
+        text-align: center;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.report-table tbody tr {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+.report-table tbody tr:nth-child(even) {
+    animation-delay: 0.05s;
+}
+
+.report-table tbody tr:nth-child(odd) {
+    animation-delay: 0.1s;
+}
+
+/* Loading spinner for export */
+.export-loading {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    color: white;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Print-specific styles */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .reports-container, .reports-container * {
+        visibility: visible;
+    }
+    .reports-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+    .report-period-selector, .chart-toggle {
+        display: none !important;
+    }
+    .table-view, .chart-view, .boxplot-view {
+        display: block !important;
+        height: auto !important;
+        page-break-inside: avoid;
+    }
+    .report-section {
+        page-break-after: always;
+    }
+    .report-section:last-child {
+        page-break-after: auto;
+    }
+}
+</style>
+
+<!-- Loading overlay for export -->
+<div class="export-loading" id="exportLoading">
+    <div class="spinner"></div>
+    <p>Generating PDF report...</p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Parse the data from Django template
+    const monthlyData = JSON.parse('{{ monthly_json|escapejs }}') || [];
+    const categoryData = JSON.parse('{{ category_json|escapejs }}') || [];
+    
+    // Chart instances
+    let monthlyChart = null;
+    let categoryChart = null;
+    let boxPlotChart = null;
+    
+    // Toggle between table and chart views
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const section = this.closest('.report-section');
+            const view = this.dataset.view;
+            const isMonthly = section.querySelector('.section-title').textContent.includes('Monthly');
+            
+            // Update active button state
+            this.closest('.chart-toggle').querySelectorAll('.toggle-btn').forEach(b => {
+                b.classList.remove('active');
+            });
+            this.classList.add('active');
+            
+            // Hide all views first
+            section.querySelectorAll('.table-view, .chart-view, .boxplot-view').forEach(view => {
+                view.classList.add('hidden');
+            });
+            
+            // Show the selected view
+            if (view === 'table') {
+                section.querySelector('.table-view').classList.remove('hidden');
+            } else if (view === 'chart') {
+                const chartView = section.querySelector('.chart-view');
+                chartView.classList.remove('hidden');
+                if (isMonthly) {
+                    renderMonthlyTrendChart();
+                } else {
+                    renderCategoryPieChart();
+                }
+            } else if (view === 'boxplot') {
+                const boxplotView = section.querySelector('.boxplot-view');
+                boxplotView.classList.remove('hidden');
+                renderBoxPlot();
+            }
+        });
+    });
+    
+    // Monthly Trend Chart (Line Chart)
+    function renderMonthlyTrendChart() {
+        const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+        
+        // Destroy previous chart if exists
+        if (monthlyChart) {
+            monthlyChart.destroy();
+        }
+        
+        // Group data by month and type
+        const monthlyGroups = {};
+        monthlyData.forEach(item => {
+            const month = item.month.split('T')[0].substring(0, 7); // Format: YYYY-MM
+            if (!monthlyGroups[month]) {
+                monthlyGroups[month] = { income: 0, expense: 0 };
+            }
+            monthlyGroups[month][item.transaction_type] = parseFloat(item.total);
+        });
+        
+        // Sort months chronologically
+        const sortedMonths = Object.keys(monthlyGroups).sort();
+        
+        // Prepare chart data
+        const labels = sortedMonths.map(month => {
+            const [year, monthNum] = month.split('-');
+            return new Date(year, monthNum - 1).toLocaleDateString('en-US', { 
+                month: 'short', 
+                year: 'numeric' 
+            });
+        });
+        
+        const incomeData = sortedMonths.map(month => monthlyGroups[month].income || 0);
+        const expenseData = sortedMonths.map(month => monthlyGroups[month].expense || 0);
+        
+        monthlyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Income',
+                        data: incomeData,
+                        borderColor: '#4CAF50',
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Expenses',
+                        data: expenseData,
+                        borderColor: '#F44336',
+                        backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Monthly Income vs Expenses',
+                        font: {
+                            size: 16
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: $${context.raw.toFixed(2)}`;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Amount ($)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Month'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Category Pie Chart
+    function renderCategoryPieChart() {
+        const ctx = document.getElementById('categoryPieChart').getContext('2d');
+        
+        // Destroy previous chart if exists
+        if (categoryChart) {
+            categoryChart.destroy();
+        }
+        
+        // Sort categories by total (descending)
+        const sortedCategories = [...categoryData].sort((a, b) => b.total - a.total);
+        const labels = sortedCategories.map(item => item.name);
+        const data = sortedCategories.map(item => parseFloat(item.total));
+        const backgroundColors = sortedCategories.map(item => item.color || getRandomColor());
+        
+        categoryChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Expense Distribution by Category',
+                        font: {
+                            size: 16
+                        }
+                    },
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.raw;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${context.label}: $${value.toFixed(2)} (${percentage}%)`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        formatter: (value, ctx) => {
+                            const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return percentage >= 5 ? `${percentage}%` : '';
+                        },
+                        color: '#fff',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                },
+                cutout: '60%'
+            },
+            plugins: [ChartDataLabels]
+        });
+    }
+    
+    // Box Plot for Monthly Data
+    function renderBoxPlot() {
+        const ctx = document.getElementById('monthlyBoxPlot').getContext('2d');
+        
+        // Destroy previous chart if exists
+        if (boxPlotChart) {
+            boxPlotChart.destroy();
+        }
+        
+        // Prepare data for boxplot
+        const incomeData = monthlyData
+            .filter(item => item.transaction_type === 'income')
+            .map(item => parseFloat(item.total));
+        
+        const expenseData = monthlyData
+            .filter(item => item.transaction_type === 'expense')
+            .map(item => parseFloat(item.total));
+        
+        // Calculate boxplot statistics for each dataset
+        function calculateBoxplotStats(data) {
+            if (data.length === 0) return null;
+            
+            data.sort((a, b) => a - b);
+            
+            const q1 = data[Math.floor(data.length * 0.25)];
+            const median = data[Math.floor(data.length * 0.5)];
+            const q3 = data[Math.floor(data.length * 0.75)];
+            const min = data[0];
+            const max = data[data.length - 1];
+            
+            return { min, q1, median, q3, max };
+        }
+        
+        const incomeStats = calculateBoxplotStats(incomeData);
+        const expenseStats = calculateBoxplotStats(expenseData);
+        
+        boxPlotChart = new Chart(ctx, {
+            type: 'boxplot',
+            data: {
+                labels: ['Income', 'Expenses'],
+                datasets: [{
+                    backgroundColor: 'rgba(76, 175, 80, 0.5)',
+                    borderColor: '#4CAF50',
+                    borderWidth: 1,
+                    outlierColor: '#4CAF50',
+                    padding: 10,
+                    itemRadius: 0,
+                    data: [
+                        incomeStats ? [incomeStats.min, incomeStats.q1, incomeStats.median, incomeStats.q3, incomeStats.max] : [],
+                        expenseStats ? [expenseStats.min, expenseStats.q1, expenseStats.median, expenseStats.q3, expenseStats.max] : []
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Distribution of Monthly Transactions',
+                        font: {
+                            size: 16
+                        }
+                    },
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            beforeBody: function(context) {
+                                const data = context[0].dataset.data[context[0].dataIndex];
+                                if (!data || data.length < 5) return "No data available";
+                                
+                                return [
+                                    `Median: $${data[2].toFixed(2)}`,
+                                    `Q1: $${data[1].toFixed(2)}`,
+                                    `Q3: $${data[3].toFixed(2)}`,
+                                    `Min: $${data[0].toFixed(2)}`,
+                                    `Max: $${data[4].toFixed(2)}`
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Amount ($)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Helper function to generate random colors
+    function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+    
+    // Export button functionality
+    document.getElementById('export-btn').addEventListener('click', async function() {
+        const loadingOverlay = document.getElementById('exportLoading');
+        loadingOverlay.style.display = 'flex';
+        
+        try {
+            // Create a clone of the report container to avoid modifying the original
+            const reportContainer = document.querySelector('.reports-container');
+            const clone = reportContainer.cloneNode(true);
+            
+            // Remove the export button and period selector from the clone
+            const cloneHeader = clone.querySelector('.reports-header');
+            if (cloneHeader) {
+                const exportBtn = cloneHeader.querySelector('.report-period-selector');
+                if (exportBtn) {
+                    cloneHeader.removeChild(exportBtn);
+                }
+            }
+            
+            // Remove chart toggles from the clone
+            clone.querySelectorAll('.chart-toggle').forEach(toggle => {
+                toggle.remove();
+            });
+            
+            // Show all views in the clone (we want to export everything)
+            clone.querySelectorAll('.hidden').forEach(el => {
+                el.classList.remove('hidden');
+            });
+            
+            // Set fixed heights for chart containers to ensure consistent rendering
+            clone.querySelectorAll('.chart-view, .boxplot-view').forEach(chartContainer => {
+                chartContainer.style.height = '400px';
+            });
+            
+            // Temporarily append the clone to the body (but keep it invisible)
+            clone.style.position = 'absolute';
+            clone.style.left = '-9999px';
+            clone.style.width = reportContainer.offsetWidth + 'px';
+            document.body.appendChild(clone);
+            
+            // Initialize jsPDF
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'pt', 'a4');
+            
+            // Get the current date for the report title
+            const today = new Date();
+            const dateString = today.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            // Add title and date to the PDF
+            pdf.setFontSize(20);
+            pdf.setTextColor(58, 12, 163); // Primary dark color
+            pdf.text('Financial Report', 40, 40);
+            
+            pdf.setFontSize(12);
+            pdf.setTextColor(108, 117, 125); // Gray color
+            pdf.text(`Generated on ${dateString}`, 40, 60);
+            
+            // Convert each section separately to ensure they fit on pages
+            const sections = clone.querySelectorAll('.report-section');
+            
+            let currentYPosition = 80; // Start below the header
+            
+            for (let i = 0; i < sections.length; i++) {
+                const section = sections[i];
+                
+                // Convert the section to canvas
+                const canvas = await html2canvas(section, {
+                    scale: 2, // Higher quality
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true,
+                    scrollX: 0,
+                    scrollY: 0
+                });
+                
+                // Calculate dimensions
+                const imgWidth = pdf.internal.pageSize.getWidth() - 80;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                // Check if we need a new page
+                if (currentYPosition + imgHeight > pdf.internal.pageSize.getHeight() - 40) {
+                    pdf.addPage();
+                    currentYPosition = 40;
+                }
+                
+                // Add the image to the PDF
+                const imgData = canvas.toDataURL('image/png');
+                pdf.addImage(imgData, 'PNG', 40, currentYPosition, imgWidth, imgHeight);
+                
+                // Update position for next section
+                currentYPosition += imgHeight + 20;
+                
+                // Add page break after each section except the last one
+                if (i < sections.length - 1) {
+                    pdf.addPage();
+                    currentYPosition = 40;
+                }
+            }
+            
+            // Save the PDF
+            pdf.save(`financial_report_${today.getFullYear()}_${today.getMonth()+1}_${today.getDate()}.pdf`);
+            
+            // Remove the clone
+            document.body.removeChild(clone);
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Failed to generate PDF. Please try again.');
+        } finally {
+            loadingOverlay.style.display = 'none';
+        }
+    });
+    
+    // Period selector functionality
+    document.getElementById('period-select').addEventListener('change', function() {
+        console.log('Period changed to:', this.value);
+        // In a real implementation, this would reload data for the selected period
+    });
+    
+    // Initialize charts if any chart view is active by default
+    document.querySelectorAll('.chart-view:not(.hidden), .boxplot-view:not(.hidden)').forEach(chartView => {
+        if (chartView.id.includes('monthly')) {
+            if (chartView.classList.contains('chart-view')) {
+                renderMonthlyTrendChart();
+            } else if (chartView.classList.contains('boxplot-view')) {
+                renderBoxPlot();
+            }
+        } else {
+            renderCategoryPieChart();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a0ca3;
+            --primary-light: #4895ef;
+            --secondary: #f72585;
+            --dark: #212529;
+            --light: #f8f9fa;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --success: #4bb543;
+            --error: #ff3333;
+            --warning: #ffcc00;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            --border-radius: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background-color: #f5f7fb;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .navbar {
+            background-color: white;
+            box-shadow: var(--shadow-sm);
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.1), transparent);
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar a {
+            color: var(--gray);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            padding: 1.25rem 1rem;
+            position: relative;
+            transition: var(--transition);
+            display: inline-block;
+        }
+
+        .navbar a:hover {
+            color: var(--primary);
+        }
+
+        .navbar a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 3px;
+            background: var(--primary);
+            transition: var(--transition);
+            border-radius: 3px 3px 0 0;
+        }
+
+        .navbar a:hover::after {
+            width: 100%;
+        }
+
+        .navbar a.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .navbar a.active::after {
+            width: 100%;
+        }
+
+        .logout-btn {
+            color: var(--secondary) !important;
+            margin-left: 1rem;
+            font-weight: 600 !important;
+        }
+
+        .logout-btn:hover {
+            color: #d0006f !important;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .messages {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 2rem;
+        }
+
+        .messages li {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+            animation: slideIn 0.3s ease-out forwards;
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        .messages li::before {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+
+        .success {
+            background-color: rgba(75, 181, 67, 0.1);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .success::before {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234bb543'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E");
+        }
+
+        .error {
+            background-color: rgba(255, 51, 51, 0.1);
+            color: var(--error);
+            border-left: 4px solid var(--error);
+        }
+
+        .error::before {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff3333'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'/%3E%3C/svg%3E");
+        }
+
+        .warning {
+            background-color: rgba(255, 204, 0, 0.1);
+            color: #b38f00;
+            border-left: 4px solid var(--warning);
+        }
+
+        .warning::before {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23b38f00'%3E%3Cpath d='M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z'/%3E%3C/svg%3E");
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                padding: 0.5rem;
+            }
+
+            .nav-links {
+                width: 100%;
+                overflow-x: auto;
+                padding: 0.5rem 0;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .navbar a {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.85rem;
+                white-space: nowrap;
+            }
+
+            .container {
+                padding: 0 1rem;
+                margin: 1rem auto;
+            }
+        }
+
+        /* Professional loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(67, 97, 238, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .user-menu {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .user-icon {
+            cursor: pointer;
+            border-radius: 50%;
+            background: #f5f7fb;
+            padding: 4px;
+            transition: box-shadow 0.2s;
+        }
+        .user-icon:hover {
+            box-shadow: 0 2px 8px rgba(67,97,238,0.15);
+        }
+        .user-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 120%;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(67,97,238,0.08);
+            min-width: 160px;
+            z-index: 1001;
+            padding: 0.5rem 0;
+        }
+        .user-dropdown .user-info {
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid #e9ecef;
+            color: #3a0ca3;
+            font-size: 1rem;
+        }
+        .user-dropdown a {
+            display: block;
+            padding: 0.75rem 1.25rem;
+            color: #212529;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .user-dropdown a:hover {
+            background: #f5f7fb;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-links">
+            <a href="{% url 'dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">Dashboard</a>
+            <a href="{% url 'income' %}" class="{% if request.path == '/income/' %}active{% endif %}">Income</a>
+            <a href="{% url 'expenses' %}" class="{% if request.path == '/expenses/' %}active{% endif %}">Expenses</a>
+            <a href="{% url 'budget' %}" class="{% if request.path == '/budget/' %}active{% endif %}">Budget</a>
+            <a href="{% url 'reports' %}" class="{% if request.path == '/reports/' %}active{% endif %}">Reports</a>
+        </div>
+        <div class="user-menu">
+            <div class="user-icon" id="userIcon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M21 20c0-2.7-4-4-9-4s-9 1.3-9 4"></path></svg>
+            </div>
+            <div class="user-dropdown" id="userDropdown">
+                <div class="user-info">
+                    <strong>{{ request.user.username }}</strong>
+                </div>
+                <a href="{% url 'profile' %}">Profile</a>
+                <a href="{% url 'logout' %}">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li class="{{ message.tags }}">
+                {{ message }}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const userIcon = document.getElementById('userIcon');
+        const userDropdown = document.getElementById('userDropdown');
+        userIcon.addEventListener('click', function(e) {
+            userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+        });
+        document.addEventListener('click', function(e) {
+            if (!userIcon.contains(e.target) && !userDropdown.contains(e.target)) {
+                userDropdown.style.display = 'none';
+            }
+        });
+    });
+    </script>
+</body>
+</html>

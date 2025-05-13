@@ -1,0 +1,192 @@
+{% block content %}
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Arial', sans-serif;
+        background: linear-gradient(135deg, #1a1a2e, #16213e);
+        overflow: hidden;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .container {
+        position: relative;
+        z-index: 1;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        width: 350px;
+    }
+
+    h2 {
+        color: white;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    form div {
+        margin-bottom: 1rem;
+    }
+
+    label {
+        display: block;
+        color: white;
+        margin-bottom: 0.5rem;
+    }
+
+    input {
+        width: 100%;
+        padding: 0.8rem;
+        border: none;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+
+    input:focus {
+        outline: none;
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    button {
+        width: 100%;
+        padding: 0.8rem;
+        border: none;
+        border-radius: 5px;
+        background: #4CAF50;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    button:hover {
+        background: #45a049;
+    }
+
+    p {
+        color: white;
+        text-align: center;
+        margin-top: 1rem;
+    }
+
+    a {
+        color: #4CAF50;
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+    /* Background animation */
+    .balls {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+    }
+
+    .ball {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        animation: float 15s infinite linear;
+    }
+
+    @keyframes float {
+        0% {
+            transform: translateY(0) rotate(0deg);
+        }
+        100% {
+            transform: translateY(-1000px) rotate(720deg);
+        }
+    }
+
+    /* Ripple effect */
+    .ripple {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.4);
+        transform: scale(0);
+        pointer-events: none;
+        animation: ripple-animation 1s ease-out;
+    }
+
+    @keyframes ripple-animation {
+        to {
+            transform: scale(10);
+            opacity: 0;
+        }
+    }
+</style>
+
+<div class="balls" id="balls"></div>
+<div class="container">
+    <h2>Login</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" name="username" required>
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" name="password" required>
+        </div>
+        <button type="submit">Login</button>
+    </form>
+    <p>Don't have an account? <a href="{% url 'signup' %}">Sign up</a></p>
+</div>
+
+<script>
+    // Create floating balls
+    document.addEventListener('DOMContentLoaded', function() {
+        const ballsContainer = document.getElementById('balls');
+        const ballCount = 15;
+        
+        for (let i = 0; i < ballCount; i++) {
+            const ball = document.createElement('div');
+            ball.classList.add('ball');
+            
+            const size = Math.random() * 20 + 10;
+            const posX = Math.random() * window.innerWidth;
+            const posY = Math.random() * window.innerHeight;
+            const delay = Math.random() * 5;
+            const duration = Math.random() * 10 + 10;
+            
+            ball.style.width = `${size}px`;
+            ball.style.height = `${size}px`;
+            ball.style.left = `${posX}px`;
+            ball.style.top = `${posY}px`;
+            ball.style.animationDelay = `${delay}s`;
+            ball.style.animationDuration = `${duration}s`;
+            
+            ballsContainer.appendChild(ball);
+        }
+        
+        // Ripple effect
+        document.addEventListener('mousemove', function(e) {
+            const ripple = document.createElement('div');
+            ripple.classList.add('ripple');
+            ripple.style.left = `${e.clientX - 10}px`;
+            ripple.style.top = `${e.clientY - 10}px`;
+            document.body.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 1000);
+        });
+    });
+</script>
+{% endblock %}

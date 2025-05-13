@@ -1,0 +1,245 @@
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="logo-container">
+                <svg class="logo-icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12,3L2,12H5V20H19V12H22L12,3M12,7.7L16,11.2V18H14V14H10V18H8V11.2L12,7.7Z"/>
+                </svg>
+                <h2>Sign Up</h2>
+            </div>
+            <p>Join our community today</p>
+        </div>
+        
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+            <div class="form-group">
+                {% for field in form %}
+                <div class="input-group floating">
+                    {{ field }}
+                    {{ field.label_tag }}
+                    <div class="underline"></div>
+                    {% if field.help_text %}
+                    <small class="help-text">{{ field.help_text }}</small>
+                    {% endif %}
+                    {% for error in field.errors %}
+                    <div class="error-message">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="auth-btn">
+                <span>Sign Up</span>
+            </button>
+        </form>
+        <div class="auth-footer">
+            <p>Already have an account? <a href="{% url 'login' %}" class="auth-link">Login</a></p>
+        </div>
+    </div>
+</div>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+    :root {
+        --primary: #6c5ce7;
+        --primary-dark: #5649c0;
+        --primary-light: #a29bfe;
+        --secondary: #00cec9;
+        --dark: #2d3436;
+        --light: #f5f6fa;
+        --shadow: 0 20px 30px rgba(0, 0, 0, 0.15);
+        --transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: 'Poppins', sans-serif;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
+    .auth-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 20px;
+        position: relative;
+    }
+    .auth-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: var(--shadow);
+        position: relative;
+        overflow: hidden;
+        max-width: 450px;
+        width: 100%;
+        z-index: 1;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transform: perspective(1000px);
+        transition: transform 0.5s ease, box-shadow 0.5s ease;
+    }
+    .logo-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    .logo-icon {
+        width: 40px;
+        height: 40px;
+        fill: var(--primary);
+    }
+    .auth-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .auth-header h2 {
+        color: var(--primary);
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+        background: linear-gradient(to right, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+    .auth-header p {
+        color: var(--dark);
+        opacity: 0.7;
+        font-size: 0.95rem;
+    }
+    .input-group { margin-bottom: 25px; position: relative; }
+    .input-group.floating input,
+    .input-group.floating textarea,
+    .input-group.floating select {
+        height: 50px;
+        padding: 15px 15px 5px 15px;
+    }
+    .input-group.floating label {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        color: var(--dark);
+        font-weight: 400;
+        transition: var(--transition);
+        pointer-events: none;
+        opacity: 0.7;
+    }
+    .input-group.floating input:focus ~ label,
+    .input-group.floating input:not(:placeholder-shown) ~ label,
+    .input-group.floating textarea:focus ~ label,
+    .input-group.floating textarea:not(:placeholder-shown) ~ label,
+    .input-group.floating select:focus ~ label,
+    .input-group.floating select:not([value=""]):valid ~ label {
+        top: 5px;
+        left: 15px;
+        font-size: 0.8rem;
+        opacity: 1;
+        color: var(--primary);
+    }
+    .input-group input {
+        width: 100%;
+        padding: 15px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: var(--transition);
+        background: rgba(245, 246, 250, 0.8);
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .input-group .underline {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: var(--primary-light);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: var(--transition);
+    }
+    .input-group input:focus {
+        outline: none;
+        box-shadow: 0 5px 15px rgba(108, 92, 231, 0.2);
+    }
+    .input-group input:focus ~ .underline {
+        transform: scaleX(1);
+    }
+    .error-message {
+        color: #e74c3c;
+        font-size: 0.8rem;
+        margin-top: 5px;
+    }
+    .help-text {
+        color: #7f8c8d;
+        font-size: 0.75rem;
+        display: block;
+        margin-top: 5px;
+    }
+    .auth-btn {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        box-shadow: 0 10px 20px rgba(108, 92, 231, 0.3);
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        overflow: hidden;
+        position: relative;
+    }
+    .auth-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 30px rgba(108, 92, 231, 0.4);
+    }
+    .auth-btn:active {
+        transform: translateY(1px);
+    }
+    .auth-footer {
+        text-align: center;
+        margin-top: 25px;
+        color: var(--dark);
+        font-size: 0.9rem;
+    }
+    .auth-link {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 600;
+        position: relative;
+    }
+    .auth-link::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: var(--primary);
+        transition: var(--transition);
+    }
+    .auth-link:hover::after {
+        width: 100%;
+    }
+    @media (max-width: 768px) {
+        .auth-card { padding: 30px; }
+        .auth-header h2 { font-size: 1.8rem; }
+        .auth-btn { padding: 12px; }
+    }
+    @media (max-width: 480px) {
+        .auth-card { padding: 25px 20px; }
+        .auth-header h2 { font-size: 1.6rem; }
+        .input-group input { padding: 12px; }
+    }
+</style>
+{% endblock %}
